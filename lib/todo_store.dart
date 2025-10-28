@@ -54,9 +54,20 @@ class TodoStore extends ChangeNotifier {
 
   Future<void> toggle(int index, bool value) async {
     final t = _items[index];
-    t.done = value;
-    notifyListeners();
-    await api.update(_key!, t.id!, t.toJson());
+    final previousValue = t.done;
+
+    try {
+      final updated = TodoItem(t.text, id: t.id, done: value);
+
+      await api.update(_key!, t.id!, updated.toJson());
+
+      t.done = value;
+      notifyListeners();
+    } catch (e) {
+      t.done = previousValue;
+      _error = 'Kunde inte uppdatera servern: $e';
+      notifyListeners();
+    }
   }
 
   Future<void> removeAt(int index) async {
