@@ -1,5 +1,10 @@
 # todo_app
 
+Detta är en teknisk notering inför inlämning.
+
+- Koden ligger nu i organisationens repo.
+- toggle() i todo_store.dart är uppdaterad så att UI bara uppdaterar lokalt efter lyckad serverrespons, så UI och server hålls i synk.
+
 A new Flutter project.
 
 ## Getting Started
