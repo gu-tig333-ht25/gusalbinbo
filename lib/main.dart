@@ -31,6 +31,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<TodoStore>();
+    final items = store.visibleItems;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,36 +40,51 @@ class MyHomePage extends StatelessWidget {
       ),
       body: store.loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: store.items.length,
-              itemBuilder: (context, index) {
-                final item = store.items[index];
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: Checkbox(
-                        value: item.done,
-                        onChanged: (v) =>
-                            context.read<TodoStore>().toggle(index, v ?? false),
-                      ),
-                      title: Text(item.text, style: _itemTextStyle(item.done)),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Ta bort (hamnar i historik)',
-                        onPressed: () =>
-                            context.read<TodoStore>().removeAt(index),
-                      ),
-                    ),
-                    const Divider(
-                      height: 0,
-                      thickness: 1,
-                      indent: 72,
-                      endIndent: 16,
-                    ),
-                  ],
-                );
-              },
+          : Column(
+              children: [
+                const SizedBox(height: 8),
+                const _FilterRow(),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      final originalIndex = store.items.indexOf(item);
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: Checkbox(
+                              value: item.done,
+                              onChanged: (v) => context
+                                  .read<TodoStore>()
+                                  .toggle(originalIndex, v ?? false),
+                            ),
+                            title: Text(
+                              item.text,
+                              style: _itemTextStyle(item.done),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Ta bort (hamnar i historik)',
+                              onPressed: () => context
+                                  .read<TodoStore>()
+                                  .removeAt(originalIndex),
+                            ),
+                          ),
+                          const Divider(
+                            height: 0,
+                            thickness: 1,
+                            indent: 72,
+                            endIndent: 16,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
@@ -135,4 +151,32 @@ class AddItemPage extends StatelessWidget {
     );
   }
 }
-//final
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<TodoStore>();
+
+    Widget buildChip(String label, TodoFilter value) {
+      return ChoiceChip(
+        label: Text(label),
+        selected: store.filter == value,
+        onSelected: (_) => context.read<TodoStore>().setFilter(value),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          buildChip('Alla', TodoFilter.all),
+          buildChip('Gjorda', TodoFilter.done),
+          buildChip('Ogjorda', TodoFilter.notDone),
+        ],
+      ),
+    );
+  }
+}

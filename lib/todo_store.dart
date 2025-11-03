@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'todo_api.dart';
 import 'todo_item.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+enum TodoFilter { all, done, notDone }
 
 class TodoStore extends ChangeNotifier {
   final TodoApi api;
@@ -13,11 +16,32 @@ class TodoStore extends ChangeNotifier {
   bool _loading = true;
   String? _error;
 
+  TodoFilter _filter = TodoFilter.all;
+  TodoFilter get filter => _filter;
+
   List<TodoItem> get items => List.unmodifiable(_items);
   List<TodoItem> get history => List.unmodifiable(_history);
   bool get hasHistory => _history.isNotEmpty;
   bool get loading => _loading;
   String? get error => _error;
+
+  List<TodoItem> get visibleItems {
+    switch (_filter) {
+      case TodoFilter.done:
+        return _items.where((t) => t.done).toList();
+      case TodoFilter.notDone:
+        return _items.where((t) => !t.done).toList();
+      case TodoFilter.all:
+      default:
+        return List.unmodifiable(_items);
+    }
+  }
+
+  void setFilter(TodoFilter value) {
+    if (_filter == value) return;
+    _filter = value;
+    notifyListeners();
+  }
 
   Future<void> init() async {
     _loading = true;
@@ -71,11 +95,21 @@ class TodoStore extends ChangeNotifier {
   }
 
   Future<void> removeAt(int index) async {
-    final removed = _items.removeAt(index);
-    _history.insert(0, removed);
-    notifyListeners();
-    if (removed.id != null) {
-      await api.remove(_key!, removed.id!);
+    if (index < 0 || index >= _items.length) return;
+
+    final todo = _items[index];
+
+    try {
+      if (todo.id != null) {
+        await api.remove(_key!, todo.id!);
+      }
+
+      final removed = _items.removeAt(index);
+      _history.insert(0, removed);
+    } catch (e) {
+      _error = 'Kunde inte ta bort från servern: $e';
+    } finally {
+      notifyListeners();
     }
   }
 
